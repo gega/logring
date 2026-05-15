@@ -43,7 +43,7 @@ typedef LGR_MSG_SIZE_TYPE lgr_msg_size_t;
 #define MMFL_HDR_MAX (3+(TYPE_DECIMAL_DIGITS(lgr_msg_size_t)))
 
 struct log_s;
-typedef void ( *notify_cb_t )( struct log_s *, void * );
+typedef void ( *notify_cb_t ) ( struct log_s *, void * );
 struct log_s
 {
   lwrb_t rb;
@@ -86,24 +86,25 @@ void log_printf( struct log_s *log, char const *fmt, ... )
   va_list val;
   va_start( val, fmt );
   int ret = npf_vsnprintf( log->wrb, sizeof( log->wrb ) - 1, fmt, val );
-  if ( ret < 0 )
-    return;
-  int ln = MIN( ret, ( lgr_msg_size_t ) LGR_MAX_LOG_LEN );
-  va_end( val );
-  lwrb_sz_t spc = lwrb_get_free( &log->rb );
-  uint8_t pl = npf_snprintf( pre, sizeof( pre ), "\n%d ", ln );
-  while ( spc < ( ln + pl ) )
+  if ( ret > 0 )
   {
-    char *s;
-    int l;
-    // not enough room, remove oldest message(s)
-    RB_READMSG( &log->mmfl, s, l, lwrb_read );
-    ( void )s;
-    ( void )l;
-    spc = lwrb_get_free( &log->rb );
+    int ln = MIN( ret, ( lgr_msg_size_t ) LGR_MAX_LOG_LEN );
+    va_end( val );
+    lwrb_sz_t spc = lwrb_get_free( &log->rb );
+    uint8_t pl = npf_snprintf( pre, sizeof( pre ), "\n%d ", ln );
+    while ( spc < ( ln + pl ) )
+    {
+      char *s;
+      int l;
+      // not enough room, remove oldest message(s)
+      RB_READMSG( &log->mmfl, s, l, lwrb_read );
+      ( void )s;
+      ( void )l;
+      spc = lwrb_get_free( &log->rb );
+    }
+    lwrb_write( &log->rb, pre, pl );
+    lwrb_write( &log->rb, log->wrb, ln );
   }
-  lwrb_write( &log->rb, pre, pl );
-  lwrb_write( &log->rb, log->wrb, ln );
 
   LGR_MUTEX_UNLOCK(  );
 

@@ -1,0 +1,6 @@
+[submodule "3rd-party/mmfl"]
+	path = 3rd-party/mmfl
+	url = https://github.com/gega/mmfl.git
+[submodule "3rd-party/lwrb"]
+	path = 3rd-party/lwrb
+	url = https://github.com/MaJerle/lwrb.git

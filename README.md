@@ -120,7 +120,7 @@ The total RAM usage is approximately:
 
 ```text
 user ring buffer
-+ sizeof(struct log_s)
++ sizeof(struct lgr_s)
 + small framing overhead
 ```
 
@@ -129,7 +129,7 @@ More precisely:
 * `wrb[]`: `LGR_MAX_LOG_LEN + 1`
 * `rdb[]`: `LGR_MAX_LOG_LEN + MMFL_HDR_MAX`
 * User-provided ring buffer
-* `struct log_s` bookkeeping fields
+* `struct lgr_s` bookkeeping fields
 
 For the default configuration (`LGR_MAX_LOG_LEN = 240`), the internal buffers consume roughly 485 bytes in addition to the user ring buffer.
 
@@ -138,7 +138,7 @@ For the default configuration (`LGR_MAX_LOG_LEN = 240`), the internal buffers co
 ## Data Structure
 
 ```c
-struct log_s;
+struct lgr_s;
 ```
 
 Opaque state structure that must remain allocated for the lifetime of the logger.
@@ -148,15 +148,15 @@ Opaque state structure that must remain allocated for the lifetime of the logger
 ## Callback Type
 
 ```c
-typedef void (*notify_cb_t)(struct log_s *log, void *ud);
+typedef void (*notify_cb_t)(struct lgr_s *log, void *ud);
 ```
 
-Called after each successful `log_printf()` invocation.
+Called after each successful `lgr_printf()` invocation.
 
 Parameters:
 
 * `log` – pointer to the logger instance
-* `ud` – user-defined pointer supplied to `log_init()`
+* `ud` – user-defined pointer supplied to `lgr_init()`
 
 Typical uses:
 
@@ -173,8 +173,8 @@ The callback is invoked after the internal lock has been released.
 ### `int log_init(...)`
 
 ```c
-int log_init(
-    struct log_s *log,
+int lgr_init(
+    struct lgr_s *log,
     uint8_t *buf,
     int size,
     notify_cb_t ncb,
@@ -201,10 +201,10 @@ The buffer must be large enough to hold at least one maximum-sized message plus 
 
 ---
 
-### `void log_printf(...)`
+### `void lgr_printf(...)`
 
 ```c
-void log_printf(struct log_s *log, char const *fmt, ...);
+void lgr_printf(struct lgr_s *log, char const *fmt, ...);
 ```
 
 Formats a message and stores it in the ring buffer.
@@ -218,11 +218,11 @@ Behavior:
 
 ---
 
-### `int log_get_line(...)`
+### `int lgr_get_line(...)`
 
 ```c
-int log_get_line(
-    struct log_s *log,
+int lgr_get_line(
+    struct lgr_s *log,
     char *buf,
     lgr_msg_size_t len
 );
@@ -265,17 +265,17 @@ Behavior:
 ```c
 #include "logring.h"
 
-static struct log_s logger;
+static struct lgr_s logger;
 static uint8_t log_storage[2048];
 
-static void log_notify(struct log_s *log, void *ud)
+static void log_notify(struct lgr_s *log, void *ud)
 {
     /* Signal a task, set an event flag, or trigger BLE notification */
 }
 
 void app_init(void)
 {
-    log_init(
+    lgr_init(
         &logger,
         log_storage,
         sizeof(log_storage),
@@ -289,7 +289,7 @@ void app_init(void)
 
 ```c
 for (int i = 0; i < 100; i++) {
-    log_printf(&logger,
+    lgr_printf(&logger,
                "msg %d: 0x%02x %d\n",
                i,
                (i % 0xff),
@@ -302,7 +302,7 @@ for (int i = 0; i < 100; i++) {
 ```c
 char line[128];
 
-while (log_get_line(&logger, line, sizeof(line)) > 0) {
+while (lgr_get_line(&logger, line, sizeof(line)) > 0) {
     send_over_ble(line);
 }
 ```
@@ -331,18 +331,19 @@ The library itself does not implement synchronization.
 
 Use `LGR_MUTEX_LOCK()` and `LGR_MUTEX_UNLOCK()` to protect:
 
-* Concurrent `log_printf()` calls
-* Concurrent `log_get_line()` calls
+* Concurrent `lgr_printf()` calls
+* Concurrent `lgr_get_line()` calls
 * Simultaneous producers and consumers
 
 ---
 
 ## Notes
 
-* `log_printf()` ignores empty formatting results.
+* `lgr_printf()` ignores empty formatting results.
 * Message lengths are stored using `LGR_MSG_SIZE_TYPE`.
 * Messages may include newline characters; they are treated as ordinary text.
-* `log_get_line()` removes messages from the buffer as they are read.
+* `lgr_get_line()` removes messages from the buffer as they are read.
 * No dynamic memory allocation is used.
+
 
 

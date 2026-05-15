@@ -170,7 +170,7 @@ The callback is invoked after the internal lock has been released.
 
 ## API Reference
 
-### `int log_init(...)`
+### `int lgr_init(...)`
 
 ```c
 int lgr_init(

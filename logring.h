@@ -14,12 +14,10 @@
 #define LGR_MUTEX_UNLOCK()
 #endif
 
-#define TYPE_BITS(type) (sizeof(type) * CHAR_BIT)
-#define TYPE_DECIMAL_DIGITS(type) (((TYPE_BITS(type)) * 30103) / 100000 + 1)
-
 #include "lwrb/lwrb.h"
 
 #define MMFL_FD_TYPE lwrb_t *
+#define MMFL_LEN_BASE 16
 #include "mmfl.h"
 
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
@@ -40,7 +38,6 @@
 
 typedef LGR_MSG_SIZE_TYPE lgr_msg_size_t;
 
-#define MMFL_HDR_MAX (3+(TYPE_DECIMAL_DIGITS(lgr_msg_size_t)))
 
 struct lgr_s;
 typedef void ( *notify_cb_t ) ( struct lgr_s *, void * );
@@ -57,6 +54,7 @@ struct lgr_s
 int lgr_get_line( struct lgr_s *lgr, char *buf, lgr_msg_size_t len );
 void lgr_printf( struct lgr_s *lgr, char const *fmt, ... );
 int lgr_init( struct lgr_s *lgr, uint8_t * buf, int size, notify_cb_t ncb, void *ud );
+LGR_MSG_SIZE_TYPE lgr_next_size( struct lgr_s *lgr );
 
 
 #ifdef LGR_IMPLEMENTATION
@@ -68,7 +66,7 @@ int lgr_get_line( struct lgr_s *lgr, char *buf, lgr_msg_size_t len )
 
   LGR_MUTEX_LOCK(  );
 
-  RB_READMSG( &lgr->mmfl, strt, ln, lwrb_read );
+  RB_READMSG( &lgr->mmfl, strt, ln, lwrb_read, 0 );
   if ( NULL != buf && len > 0 )
   {
     int copy_len = MIN( ln, len - 1 );
@@ -81,6 +79,21 @@ int lgr_get_line( struct lgr_s *lgr, char *buf, lgr_msg_size_t len )
   return ( ln );
 }
 
+LGR_MSG_SIZE_TYPE lgr_next_size( struct lgr_s *lgr )
+{
+  char *strt = NULL;
+  int ln = 0;
+
+  LGR_MUTEX_LOCK(  );
+
+  RB_READMSG( &lgr->mmfl, strt, ln, lwrb_read, MMFL_PEEK );
+  (void)strt;
+
+  LGR_MUTEX_UNLOCK(  );
+
+  return ( (LGR_MSG_SIZE_TYPE)ln );
+}
+
 void lgr_printf( struct lgr_s *lgr, char const *fmt, ... )
 {
   char pre[MMFL_HDR_MAX + 1];
@@ -89,19 +102,19 @@ void lgr_printf( struct lgr_s *lgr, char const *fmt, ... )
 
   va_list val;
   va_start( val, fmt );
-  int ret = npf_vsnprintf( lgr->wrb, sizeof( lgr->wrb ) - 1, fmt, val );
+  int ret = npf_vsnprintf( lgr->wrb, sizeof( lgr->wrb ), fmt, val );
   if ( ret > 0 )
   {
     int ln = MIN( ret, ( lgr_msg_size_t ) LGR_MAX_LOG_LEN );
     va_end( val );
     lwrb_sz_t spc = lwrb_get_free( &lgr->rb );
-    uint8_t pl = npf_snprintf( pre, sizeof( pre ), "\n%d ", ln );
+    uint8_t pl = npf_snprintf( pre, sizeof( pre ), "\n%x ", ln );
     while ( spc < ( ln + pl ) )
     {
       char *s;
       int l;
       // not enough room, remove oldest message(s)
-      RB_READMSG( &lgr->mmfl, s, l, lwrb_read );
+      RB_READMSG( &lgr->mmfl, s, l, lwrb_read, 0 );
       ( void )s;
       ( void )l;
       spc = lwrb_get_free( &lgr->rb );

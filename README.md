@@ -39,7 +39,7 @@ LogRing depends on three external libraries:
 * [nanoprintf](https://github.com/charlesnicholson/nanoprintf.git)
   Small `printf` implementation used to format log messages.
 
-* [MMFL](https://github.com/gega/mmfl.git)
+* [mmfl](https://github.com/gega/mmfl.git)
   Minimalist message framing library
 
 Make sure these headers are available in your include path, these are provided as submodules in this repo as reference.

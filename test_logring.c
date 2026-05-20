@@ -83,7 +83,7 @@ static int expect_int( int actual, int expected )
 
 #define RUN_TEST(fn)                                              \
     do {                                                          \
-        printf("%-35s : ", #fn);                                  \
+        printf("%-38s : ", #fn);                                  \
         int fail = fn();                                          \
         printf("%s", !fail ? "PASS\n" : "");                      \
         if (!fail)                                                \

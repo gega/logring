@@ -28,9 +28,14 @@
   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 #ifndef LOGRING_H
 #define LOGRING_H
+
+#include <string.h>
+
+#ifndef LGR_SEQUENCE_NO
+#define LGR_SEQUENCE_NO 0
+#endif
 
 #ifndef LGR_MAX_LOG_LEN
 #define LGR_MAX_LOG_LEN (240)
@@ -69,6 +74,11 @@
 
 typedef LGR_MSG_SIZE_TYPE lgr_msg_size_t;
 
+#if LGR_SEQUENCE_NO == 0
+_Static_assert( LGR_MAX_LOG_LEN > 2, "LGR_MAX_LOG_LEN should be at least 3 char" );
+#else
+_Static_assert( LGR_MAX_LOG_LEN > 7, "LGR_MAX_LOG_LEN should be at least 8 char" );
+#endif
 
 struct lgr_s;
 typedef void ( *notify_cb_t ) ( struct lgr_s *, void * );
@@ -79,6 +89,9 @@ struct lgr_s
   char wrb[LGR_MAX_LOG_LEN + 1];
   char rdb[LGR_MAX_LOG_LEN + MMFL_HDR_MAX];
   notify_cb_t notify_cb;
+#if LGR_SEQUENCE_NO != 0
+  unsigned short seq;
+#endif
   void *ud;
 };
 
@@ -133,7 +146,13 @@ void lgr_printf( struct lgr_s *lgr, char const *fmt, ... )
 
   va_list val;
   va_start( val, fmt );
+#if LGR_SEQUENCE_NO != 0
+  ++lgr->seq;
+  npf_snprintf( lgr->wrb, 6, "%04x ", lgr->seq );
+  int ret = 5 + npf_vsnprintf( &lgr->wrb[5], sizeof( lgr->wrb ) - 5, fmt, val );
+#else
   int ret = npf_vsnprintf( lgr->wrb, sizeof( lgr->wrb ), fmt, val );
+#endif
   if ( ret > 0 )
   {
     int ln = MIN( ret, ( lgr_msg_size_t ) LGR_MAX_LOG_LEN );
@@ -165,6 +184,7 @@ int lgr_init( struct lgr_s *lgr, uint8_t *buf, int size, notify_cb_t ncb, void *
   // check if at least one max length message fits in the buffer with header
   if ( size < ( LGR_MAX_LOG_LEN + MMFL_HDR_MAX ) )
     return ( -1 );
+  memset( lgr, 0, sizeof( struct lgr_s ) );
   MMFL_INIT( &lgr->mmfl, lgr->rdb, sizeof( lgr->rdb ), &lgr->rb );
   lwrb_init( &lgr->rb, buf, size );
   lwrb_set_arg( &lgr->rb, lgr );

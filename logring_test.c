@@ -7,6 +7,7 @@
 #define LGR_MAX_LOG_LEN (240)
 #define LGR_SIZE_TYPE uint8_t
 
+#define LGR_SEQUENCE_NO 1
 #define LGR_IMPLEMENTATION
 #include "logring.h"
 

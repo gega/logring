@@ -78,7 +78,14 @@ Typical choices:
 | --------------- | ------------- |
 | `unsigned char` | 255           |
 | `uint16_t`      | 65535         |
-| `uint32_t`      | 4294967295    |
+
+---
+
+### `LGR_SEQUENCE_NO`
+
+If defined as '1', all log messages will be prefixed with a 16 bit
+incrementing sequence number printed as four digit hex number
+followed by a space.
 
 ---
 

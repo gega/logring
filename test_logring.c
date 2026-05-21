@@ -37,6 +37,7 @@
 #include <string.h>
 #include <stdint.h>
 
+#define LGR_SEQUENCE_NO 0
 #define LGR_MAX_LOG_LEN 32
 #define LGR_IMPLEMENTATION
 #include "logring.h"
